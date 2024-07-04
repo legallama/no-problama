@@ -12,7 +12,7 @@
   <p align="center">
    Welcome to llamaTime, the ultimate task timer designed to boost your productivity and streamline your workflow! Whether you're managing projects, studying, or simply need to keep track of time, llamaTime has got you covered. <br />
 
-Key Features:
+Key Features:<br />
 Intuitive Interface: Enjoy a user-friendly design that makes setting up and managing your tasks a breeze. <br />
 Customizable Timers: Create and customize timers to fit your unique workflow and preferences. <br />
 Detailed Analytics: Gain insights into your productivity with detailed reports and analytics. <br />
@@ -27,7 +27,8 @@ At llamaTime, we believe that time is your most valuable resource. Our mission i
  <br />
 Join the llamaTime community today and take the first step towards a more productive and organized life!
 
-
+  </p>
+</div>
     <br />
     <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
     <br />
@@ -37,8 +38,7 @@ Join the llamaTime community today and take the first step towards a more produc
     <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
     <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
-  </p>
-</div>
+
 
 
 
