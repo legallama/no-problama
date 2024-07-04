@@ -7,10 +7,19 @@
     <img src="images/noprobllama_dude.png" alt="Logo" width="180" height="180">
   </a>
 
-  <h3 align="center">Best-README-Template</h3>
+  <h3 align="center">LlamaTime Time Management Tracker</h3>
 
   <p align="center">
-    An awesome README template to jumpstart your projects!
+   Welcome to llamaTime, the ultimate task timer designed to boost your productivity and streamline your workflow! Whether you're managing projects, studying, or simply need to keep track of time, llamaTime has got you covered.
+
+Key Features:
+Intuitive Interface: Enjoy a user-friendly design that makes setting up and managing your tasks a breeze.
+Customizable Timers: Create and customize timers to fit your unique workflow and preferences.
+Detailed Analytics: Gain insights into your productivity with detailed reports and analytics.
+Task Prioritization: Easily prioritize tasks and manage your time more effectively.
+Notifications and Reminders: Stay on track with timely notifications and reminders.
+Pomodoro Technique Support: Implement the Pomodoro Technique with built-in support for timed work sessions and breaks.
+Cross-Platform Sync: Sync your tasks and timers across multiple devices seamlessly.
     <br />
     <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
     <br />
