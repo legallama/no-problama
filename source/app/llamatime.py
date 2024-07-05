@@ -10,6 +10,11 @@ import pystray
 from PIL import Image, ImageDraw, ImageFont
 from tkcalendar import DateEntry
 import threading
+import time
+import shutil
+import matplotlib.pyplot as plt
+import os
+import tempfile
 
 class TimeEntryApp:
     def __init__(self, root):
@@ -27,8 +32,12 @@ class TimeEntryApp:
         self.is_timer_running = False
         # Start time of the timer
         self.start_time = None
-
+        # Elapsed time of the timer
         self.elapsed_time = timedelta()
+
+        # Set the icon
+        icon = tk.PhotoImage(file="Lama-icon.png")
+        self.root.iconphoto(False, icon)
 
         # Apply dark style to the UI
         self.apply_light_style()
@@ -73,8 +82,10 @@ class TimeEntryApp:
 
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Updates")
+        help_menu.add_command(label="Backup Data", command=self.backup_data)
+        help_menu.add_command(label="Restore Data", command=self.restore_data)
         help_menu.add_separator()
+        help_menu.add_command(label="Updates")
         help_menu.add_command(label="Docs")
         help_menu.add_command(label="Support")
 
@@ -109,7 +120,23 @@ class TimeEntryApp:
         style.configure("TFrame", background="#2e2e2e")
         style.configure("TListbox", background="#3e3e3e", foreground="white")
         style.configure("Danger.TButton", background="red", foreground="white")
-        
+
+        # Create backup data
+    def backup_data(self):
+        try:
+            shutil.copy("time_entries.csv", "time_entries_backup.csv")
+            messagebox.showinfo("Backup Success", "Data backup created successfully.")
+        except Exception as e:
+            messagebox.showerror("Backup Error", f"An error occurred while creating the backup: {str(e)}")
+
+        # Restore data from backup
+    def restore_data(self):
+        try:
+            shutil.copy("time_entries_backup.csv", "time_entries.csv")
+            messagebox.showinfo("Restore Success", "Data restored from backup successfully.")
+            self.load_entries()
+        except Exception as e:
+            messagebox.showerror("Restore Error", f"An error occurred while restoring the backup: {str(e)}")
 
     def create_widgets(self):
         # Project Name
@@ -128,29 +155,29 @@ class TimeEntryApp:
 
         # Start Time
         self.start_time_label = ttk.Label(self.root, text="Start Time:")
-        self.start_time_label.grid(column=0, row=2, padx=10, pady=10, sticky="w")
+        self.start_time_label.grid(column=0, row=2, padx=5, pady=10, sticky="w")
         self.start_time_entry = self.create_time_picker(self.root)
-        self.start_time_entry.grid(column=1, row=2, padx=10, pady=10, sticky="ew")
+        self.start_time_entry.grid(column=1, row=2, padx=5, pady=10, sticky="ew")
 
         # End Time
         self.end_time_label = ttk.Label(self.root, text="End Time:")
-        self.end_time_label.grid(column=0, row=3, padx=10, pady=10, sticky="w")
+        self.end_time_label.grid(column=0, row=3, padx=5, pady=5, sticky="w")
         self.end_time_entry = self.create_time_picker(self.root)
-        self.end_time_entry.grid(column=1, row=3, padx=10, pady=10, sticky="ew")
+        self.end_time_entry.grid(column=1, row=3, padx=5, pady=5, sticky="ew")
 
         # Note
         self.note_label = ttk.Label(self.root, text="Notes:")
-        self.note_label.grid(column=0, row=4, padx=5, pady=5, sticky="w")
-        self.note_entry = tk.Text(self.root, height=4, width=30)  # Change the height value here
-        self.note_entry.grid(column=0, row=5, padx=5, pady=5, sticky="ew")
+        self.note_label.grid(column=0, row=4, padx=5, pady=2, sticky="w")
+        self.note_entry = tk.Text(self.root, height=4, width=25)  # Change the height value here
+        self.note_entry.grid(column=0, row=5, padx=5, pady=2, sticky="ew")
 
         # Start/Stop Button
         self.start_stop_button = ttk.Button(self.root, text="Start", command=self.toggle_timer)
-        self.start_stop_button.grid(column=1, row=5, padx=0, pady=5, sticky="ew")
+        self.start_stop_button.grid(column=1, row=5, padx=(0), pady=(0, 33), sticky="ew")
 
         # Submit Button
         self.submit_button = ttk.Button(self.root, text="Submit", command=self.save_entry)
-        self.submit_button.grid(column=1, row=6, padx=0, pady=5, sticky="ew")
+        self.submit_button.grid(column=1, row=5, padx=(0), pady=(33, 0), sticky="ew")
 
         # Filter by Project
         self.filter_label = ttk.Label(self.root, text="Filter by Project:")
@@ -452,10 +479,31 @@ class TimeEntryApp:
         messagebox.showinfo("Report", report_text)
 
     def export_to_pdf(self):
+        # Generate the pie chart
+        labels = list(self.total_time.keys())
+        values = [total_time.total_seconds() / 3600 for total_time in self.total_time.values()]
+        # Convert to hours
+        
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.pie(values, labels=labels, autopct='%1.1f%%')
+        ax.axis('equal')  # Ensure the pie chart is circular
+        ax.set_title('Time Spent on Projects')
+
+        # Save the chart as a temporary PNG file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+            temp_file_path = temp_file.name
+            plt.savefig(temp_file_path, format='png')
+
+        # Create the PDF
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", size=12)
+        pdf.set_font("Courier", size=12)
+        
+        # Add the chart image to the PDF
+        pdf.image(temp_file_path, x=10, y=10, w=180)
 
+        # Add the rest of the report content
+        pdf.set_xy(10, 180)  # Set the cursor position below the chart
         pdf.cell(200, 10, txt="Project Time Entries", ln=True, align="C")
 
         pdf.cell(200, 10, txt="Entries:", ln=True, align="L")
@@ -468,6 +516,9 @@ class TimeEntryApp:
             minutes, _ = divmod(remainder, 60)
             pdf.cell(200, 10, txt=f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}, Note: {entry[4]}", ln=True)
 
+        # Remove the temporary file
+        os.remove(temp_file_path)
+        
         pdf.output("project_time_entries.pdf")
         messagebox.showinfo("Export Success", "Entries exported to project_time_entries.pdf successfully!")
 
