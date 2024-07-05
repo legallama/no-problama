@@ -14,7 +14,8 @@ import threading
 class TimeEntryApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Project Time Entry")
+        self.root.title("Llama Time")
+        self.apply_light_style()
 
        # List to store time entries
         self.entries = []
@@ -27,8 +28,10 @@ class TimeEntryApp:
         # Start time of the timer
         self.start_time = None
 
+        self.elapsed_time = timedelta()
+
         # Apply dark style to the UI
-        self.apply_dark_style()
+        self.apply_light_style()
 
         # Create UI components
         self.create_widgets()
@@ -63,6 +66,11 @@ class TimeEntryApp:
         reports_menu.add_command(label="Docs")
         reports_menu.add_command(label="Support")
 
+        view_menu = Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="View", menu=view_menu)
+        view_menu.add_command(label="Dark Theme", command=self.apply_dark_style)
+        view_menu.add_command(label="Light Theme", command=self.apply_light_style)
+
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Updates")
@@ -76,6 +84,20 @@ class TimeEntryApp:
         # Update timer in system tray
         self.update_timer_in_tray()
 
+
+    def apply_light_style(self):
+        self.root.configure(bg="#f0f0f0")
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TLabel", background="#f0f0f0", foreground="black")
+        style.configure("TButton", background="#e0e0e0", foreground="black")
+        style.configure("TEntry", fieldbackground="white", foreground="black")
+        style.configure("TCombobox", fieldbackground="white", foreground="black")
+        style.configure("TFrame", background="#f0f0f0")
+        style.configure("TListbox", background="white", foreground="black")
+        style.configure("Danger.TButton", background="red", foreground="black")
+    
+
     def apply_dark_style(self):
         self.root.configure(bg="#2e2e2e")
         style = ttk.Style()
@@ -86,6 +108,8 @@ class TimeEntryApp:
         style.configure("TCombobox", fieldbackground="#3e3e3e", foreground="white")
         style.configure("TFrame", background="#2e2e2e")
         style.configure("TListbox", background="#3e3e3e", foreground="white")
+        style.configure("Danger.TButton", background="red", foreground="white")
+        
 
     def create_widgets(self):
         # Project Name
@@ -98,69 +122,80 @@ class TimeEntryApp:
         self.date_label = ttk.Label(self.root, text="Date (YYYY-MM-DD):")
         self.date_label.grid(column=0, row=1, padx=10, pady=5, sticky="w")
         self.date_entry = DateEntry(self.root, width=30, background='darkblue',
-                    foreground='white', borderwidth=2, year=datetime.now().year,
-                    month=datetime.now().month, day=datetime.now().day, date_pattern='yyyy-mm-dd')
+                foreground='white', borderwidth=2, year=datetime.now().year,
+                month=datetime.now().month, day=datetime.now().day, date_pattern='yyyy-mm-dd')
         self.date_entry.grid(column=1, row=1, padx=10, pady=5, sticky="ew")
 
         # Start Time
-        self.start_time_label = ttk.Label(self.root, text="Start Time (HH:MM:SS):")
-        self.start_time_label.grid(column=0, row=2, padx=10, pady=5, sticky="w")
+        self.start_time_label = ttk.Label(self.root, text="Start Time:")
+        self.start_time_label.grid(column=0, row=2, padx=10, pady=10, sticky="w")
         self.start_time_entry = self.create_time_picker(self.root)
-        self.start_time_entry.grid(column=1, row=2, padx=10, pady=5, sticky="ew")
+        self.start_time_entry.grid(column=1, row=2, padx=10, pady=10, sticky="ew")
 
         # End Time
-        self.end_time_label = ttk.Label(self.root, text="End Time (HH:MM:SS):")
-        self.end_time_label.grid(column=0, row=3, padx=10, pady=5, sticky="w")
+        self.end_time_label = ttk.Label(self.root, text="End Time:")
+        self.end_time_label.grid(column=0, row=3, padx=10, pady=10, sticky="w")
         self.end_time_entry = self.create_time_picker(self.root)
-        self.end_time_entry.grid(column=1, row=3, padx=10, pady=5, sticky="ew")
+        self.end_time_entry.grid(column=1, row=3, padx=10, pady=10, sticky="ew")
+
+        # Note
+        self.note_label = ttk.Label(self.root, text="Notes:")
+        self.note_label.grid(column=0, row=4, padx=5, pady=5, sticky="w")
+        self.note_entry = tk.Text(self.root, height=4, width=30)  # Change the height value here
+        self.note_entry.grid(column=0, row=5, padx=5, pady=5, sticky="ew")
 
         # Start/Stop Button
         self.start_stop_button = ttk.Button(self.root, text="Start", command=self.toggle_timer)
-        self.start_stop_button.grid(column=1, row=4, padx=10, pady=5, sticky="ew")
+        self.start_stop_button.grid(column=1, row=5, padx=0, pady=5, sticky="ew")
 
         # Submit Button
         self.submit_button = ttk.Button(self.root, text="Submit", command=self.save_entry)
-        self.submit_button.grid(column=1, row=5, padx=10, pady=5, sticky="ew")
+        self.submit_button.grid(column=1, row=6, padx=0, pady=5, sticky="ew")
 
         # Filter by Project
         self.filter_label = ttk.Label(self.root, text="Filter by Project:")
-        self.filter_label.grid(column=0, row=6, padx=10, pady=5, sticky="w")
+        self.filter_label.grid(column=0, row=7, padx=10, pady=5, sticky="w")
         self.filter_combobox = ttk.Combobox(self.root, state="readonly")
-        self.filter_combobox.grid(column=1, row=6, padx=10, pady=5, sticky="ew")
+        self.filter_combobox.grid(column=1, row=7, padx=10, pady=5, sticky="ew")
         self.filter_combobox.bind("<<ComboboxSelected>>", self.filter_entries)
 
-        # Time Range Filter
-        self.start_time_filter_label = ttk.Label(self.root, text="Start Time (HH:MM:SS):")
-        self.start_time_filter_label.grid(column=0, row=7, padx=10, pady=5, sticky="w")
-        self.start_time_filter_entry = self.create_time_picker(self.root)
-        self.start_time_filter_entry.grid(column=1, row=7, padx=10, pady=5, sticky="ew")
+        # Start Date Filter
+        self.start_date_filter_label = ttk.Label(self.root, text="Start Date (YYYY-MM-DD):")
+        self.start_date_filter_label.grid(column=0, row=9, padx=10, pady=5, sticky="w")
+        self.start_date_filter_entry = DateEntry(self.root, width=30, background='darkblue',
+                    foreground='white', borderwidth=2, year=datetime.now().year,
+                    month=datetime.now().month, day=datetime.now().day, date_pattern='yyyy-mm-dd')
+        self.start_date_filter_entry.grid(column=1, row=9, padx=10, pady=5, sticky="ew")
 
-        self.end_time_filter_label = ttk.Label(self.root, text="End Time (HH:MM:SS):")
-        self.end_time_filter_label.grid(column=0, row=8, padx=10, pady=5, sticky="w")
-        self.end_time_filter_entry = self.create_time_picker(self.root)
-        self.end_time_filter_entry.grid(column=1, row=8, padx=10, pady=5, sticky="ew")
+        # End Date Filter
+        self.end_date_filter_label = ttk.Label(self.root, text="End Date (YYYY-MM-DD):")
+        self.end_date_filter_label.grid(column=0, row=10, padx=10, pady=5, sticky="w")
+        self.end_date_filter_entry = DateEntry(self.root, width=30, background='darkblue',
+                    foreground='white', borderwidth=2, year=datetime.now().year,
+                    month=datetime.now().month, day=datetime.now().day, date_pattern='yyyy-mm-dd')
+        self.end_date_filter_entry.grid(column=1, row=10, padx=10, pady=5, sticky="ew")
 
-        self.filter_time_button = ttk.Button(self.root, text="Filter by Time", command=self.filter_entries_by_time)
-        self.filter_time_button.grid(column=0, row=9, columnspan=2, padx=10, pady=5, sticky="ew")
+        self.filter_date_range_button = ttk.Button(self.root, text="Filter by Date Range", command=self.filter_entries_by_date_range)
+        self.filter_date_range_button.grid(column=0, row=11, columnspan=2, padx=10, pady=5, sticky="ew")
 
         # Entries Display
         self.entries_frame = ttk.LabelFrame(self.root, text="Entries")
-        self.entries_frame.grid(column=0, row=10, columnspan=2, padx=10, pady=10, sticky="nsew")
+        self.entries_frame.grid(column=0, row=11, columnspan=2, padx=10, pady=10, sticky="nsew")
         
         self.entries_listbox = tk.Listbox(self.entries_frame, height=10, width=60, bg="#3e3e3e", fg="white")
-        self.entries_listbox.pack(padx=10, pady=10, fill="both", expand=True)
+        self.entries_listbox.pack(padx=10, pady=11, fill="both", expand=True)
         self.entries_listbox.bind('<<ListboxSelect>>', self.on_select)
 
         # Edit and Delete Buttons
         self.edit_button = ttk.Button(self.root, text="Edit", command=self.edit_entry, state='disabled')
-        self.edit_button.grid(column=0, row=11, padx=10, pady=5, sticky="ew")
+        self.edit_button.grid(column=0, row=12, padx=10, pady=5, sticky="ew")
 
         self.delete_button = ttk.Button(self.root, text="Delete", command=self.delete_entry, state='disabled')
-        self.delete_button.grid(column=1, row=11, padx=10, pady=5, sticky="ew")
+        self.delete_button.grid(column=1, row=12, padx=10, pady=5, sticky="ew")
 
         # Total Time Display
         self.total_time_label = ttk.Label(self.root, text="Total Time Spent on Projects:")
-        self.total_time_label.grid(column=0, row=12, padx=10, pady=5, sticky="w")
+        self.total_time_label.grid(column=0, row=13, padx=10, pady=5, sticky="w")
         self.total_time_text = tk.Text(self.root, height=5, width=60, state='disabled', bg="#3e3e3e", fg="white")
         self.total_time_text.grid(column=0, row=13, columnspan=2, padx=10, pady=5, sticky="nsew")
 
@@ -230,6 +265,7 @@ class TimeEntryApp:
         date = self.date_entry.get().strip()
         start_time = self.get_time_from_picker(self.start_time_entry)
         end_time = self.get_time_from_picker(self.end_time_entry)
+        note = self.note_entry.get("1.0", "end-1c")  # Get the text from the Text widget
 
         if not project or not date or not start_time or not end_time:
             messagebox.showerror("Input Error", "All fields are required.")
@@ -247,7 +283,7 @@ class TimeEntryApp:
             messagebox.showerror("Input Error", "End time must be after start time.")
             return
 
-        new_entry = [project, date, start_time, end_time]
+        new_entry = [project, date, start_time, end_time, note]
 
         if self.selected_entry_index is None:
             self.entries.append(new_entry)
@@ -272,7 +308,7 @@ class TimeEntryApp:
             pass
 
         for entry in self.entries:
-            self.entries_listbox.insert(tk.END, f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}")
+            self.entries_listbox.insert(tk.END, f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}, Note: {entry[4]}")
             start_time = datetime.strptime(f"{entry[1]} {entry[2]}", "%Y-%m-%d %H:%M:%S")
             end_time = datetime.strptime(f"{entry[1]} {entry[3]}", "%Y-%m-%d %H:%M:%S")
             self.total_time[entry[0]] += (end_time - start_time)
@@ -294,6 +330,7 @@ class TimeEntryApp:
         self.end_time_entry.children['!combobox'].current(0)
         self.end_time_entry.children['!combobox2'].current(0)
         self.end_time_entry.children['!combobox3'].current(0)
+        self.note_entry.delete("1.0", tk.END)
         self.edit_button.config(state='disabled')
         self.delete_button.config(state='disabled')
 
@@ -307,10 +344,13 @@ class TimeEntryApp:
             self.date_entry.set_date(entry[1])
             self.set_time_picker(self.start_time_entry, entry[2])
             self.set_time_picker(self.end_time_entry, entry[3])
+            self.note_entry.delete("1.0", tk.END)  # Clear the note entry field
+            self.note_entry.insert("1.0", entry[4])  # Insert the note from the selected entry
             self.edit_button.config(state='normal')
             self.delete_button.config(state='normal')
         else:
             self.selected_entry_index = None
+            self.clear_fields()  # Clear all fields when no entry is selected
 
     def set_time_picker(self, frame, time_str):
         hours, minutes, seconds = time_str.split(':')
@@ -349,27 +389,26 @@ class TimeEntryApp:
             if filter_value == "All" or entry[0] == filter_value:
                 self.entries_listbox.insert(tk.END, f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}")
 
-    def filter_entries_by_time(self):
-        start_time_filter = self.get_time_from_picker(self.start_time_filter_entry)
-        end_time_filter = self.get_time_from_picker(self.end_time_filter_entry)
+    def filter_entries_by_date_range(self):
+        start_date = self.start_date_filter_entry.get().strip()
+        end_date = self.end_date_filter_entry.get().strip()
 
         try:
-            start_time_obj = datetime.strptime(start_time_filter, "%H:%M:%S")
-            end_time_obj = datetime.strptime(end_time_filter, "%H:%M:%S")
+            start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
         except ValueError:
-            messagebox.showerror("Input Error", "Invalid time format. Use HH:MM:SS for time.")
+            messagebox.showerror("Input Error", "Invalid date format. Use YYYY-MM-DD.")
             return
 
-        if end_time_obj <= start_time_obj:
-            messagebox.showerror("Input Error", "End time must be after start time.")
+        if end_date_obj < start_date_obj:
+            messagebox.showerror("Input Error", "End date must be after start date.")
             return
 
         self.entries_listbox.delete(0, tk.END)
         for entry in self.entries:
-            entry_start_time = datetime.strptime(entry[2], "%H:%M:%S")
-            entry_end_time = datetime.strptime(entry[3], "%H:%M:%S")
-            if start_time_obj <= entry_start_time <= end_time_obj or start_time_obj <= entry_end_time <= end_time_obj:
-                self.entries_listbox.insert(tk.END, f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}")
+            entry_date = datetime.strptime(entry[1], "%Y-%m-%d")
+            if start_date_obj <= entry_date <= end_date_obj:
+                self.entries_listbox.insert(tk.END, f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}, Note: {entry[4]}")
 
     def sort_entries(self, criterion):
         if criterion == "project":
@@ -427,7 +466,7 @@ class TimeEntryApp:
         for project, total_time in self.total_time.items():
             hours, remainder = divmod(total_time.total_seconds(), 3600)
             minutes, _ = divmod(remainder, 60)
-            pdf.cell(200, 10, txt=f"Project: {project}, Total Time: {int(hours)}h {int(minutes)}m", ln=True)
+            pdf.cell(200, 10, txt=f"Project: {entry[0]}, Date: {entry[1]}, Start Time: {entry[2]}, End Time: {entry[3]}, Note: {entry[4]}", ln=True)
 
         pdf.output("project_time_entries.pdf")
         messagebox.showinfo("Export Success", "Entries exported to project_time_entries.pdf successfully!")
@@ -435,14 +474,16 @@ class TimeEntryApp:
     def toggle_timer(self):
         if self.is_timer_running:
             self.stop_time = datetime.now()
+            self.elapsed_time += self.stop_time - self.start_time
             self.set_time_picker(self.end_time_entry, self.stop_time.strftime("%H:%M:%S"))
-            self.start_stop_button.config(text="Start")
+            self.start_stop_button.config(text="Start", style="TButton")
             self.is_timer_running = False
         else:
             self.start_time = datetime.now()
             self.set_time_picker(self.start_time_entry, self.start_time.strftime("%H:%M:%S"))
-            self.start_stop_button.config(text="Stop")
+            self.start_stop_button.config(text="Stop", style="Danger.TButton")
             self.is_timer_running = True
+            self.elapsed_time = timedelta()
 
     def create_system_tray(self):
         image = Image.new('RGB', (64, 64), color=(73, 109, 137))
@@ -474,11 +515,14 @@ class TimeEntryApp:
 
     def update_timer_in_tray(self):
         if self.is_timer_running:
-            elapsed_time = datetime.now() - self.start_time
+            elapsed_time = datetime.now() - self.start_time + self.elapsed_time
             hours, remainder = divmod(elapsed_time.total_seconds(), 3600)
             minutes, seconds = divmod(remainder, 60)
-            self.tray_icon.title = f"Timer: {int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+            elapsed_time_str = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+            self.start_stop_button.config(text=elapsed_time_str, style="Danger.TButton")
+            self.tray_icon.title = f"Timer: {elapsed_time_str}"
         else:
+            self.start_stop_button.config(text="Start", style="TButton")
             self.tray_icon.title = "Timer: Stopped"
         self.root.after(1000, self.update_timer_in_tray)
 
