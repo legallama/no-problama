@@ -23,6 +23,7 @@ class TimeEntryApp:
         self.root = root
         self.root.title("Llama Time")
         self.apply_light_style()
+        self.tray_icon_created = False
 
        # List to store time entries
         self.entries = []
@@ -38,7 +39,7 @@ class TimeEntryApp:
         self.elapsed_time = timedelta()
 
         # Set the icon
-        icon = tk.PhotoImage(file="Lama-icon.png")
+        icon = tk.PhotoImage(file="no-problama-master/source/app/llama-icon.gif")
         self.root.iconphoto(False, icon)
 
         # Apply dark style to the UI
@@ -46,6 +47,7 @@ class TimeEntryApp:
 
         # Create UI components
         self.create_widgets()
+
         # Load existing entries from the CSV file
         self.load_entries()
 
@@ -578,10 +580,12 @@ class TimeEntryApp:
 
     def create_system_tray(self):
         """Creates the system tray icon and menu."""
-        image = Image.new('RGB', (64, 64), color=(73, 109, 137))  # Create a blank image
+        if not self.tray_icon_created:
+            image = Image.new('RGB', (64, 64), color=(73, 109, 137))  # Create a blank image
         draw = ImageDraw.Draw(image)
         draw.rectangle((0, 0, 64, 64), fill=(0, 0, 0))  # Draw a black rectangle
         draw.text((10, 10), "Timer", fill=(255, 255, 255))  # Add "Timer" text
+
 
         # Create the tray icon with menu options
         self.tray_icon = pystray.Icon("TimeEntryApp", image, "Time Entry App", menu=pystray.Menu(
@@ -592,6 +596,7 @@ class TimeEntryApp:
         ))
 
         self.tray_icon.run_detached()
+        self.tray_icon_created = True
 
     def show_app(self):
         self.root.deiconify()
