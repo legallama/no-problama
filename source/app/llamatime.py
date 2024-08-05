@@ -16,7 +16,9 @@ import matplotlib.pyplot as plt
 import os
 import tempfile
 
+
 class TimeEntryApp:
+
     def __init__(self, root):
         self.root = root
         self.root.title("Llama Time")
@@ -95,7 +97,6 @@ class TimeEntryApp:
         # Update timer in system tray
         self.update_timer_in_tray()
 
-
     def apply_light_style(self):
         self.root.configure(bg="#f0f0f0")
         style = ttk.Style()
@@ -107,7 +108,6 @@ class TimeEntryApp:
         style.configure("TFrame", background="#f0f0f0")
         style.configure("TListbox", background="white", foreground="black")
         style.configure("Danger.TButton", background="red", foreground="black")
-    
 
     def apply_dark_style(self):
         self.root.configure(bg="#2e2e2e")
@@ -260,7 +260,7 @@ class TimeEntryApp:
         # Export to PDF Button
         self.export_button = ttk.Button(self.root, text="Export to PDF", command=self.export_to_pdf)
         self.export_button.grid(column=0, row=20, columnspan=2, padx=10, pady=5, sticky="ew")
-
+    
     def create_time_picker(self, parent):
         frame = ttk.Frame(parent)
         hours = ttk.Combobox(frame, values=[f"{i:02}" for i in range(24)], width=3, state="readonly")
@@ -275,7 +275,31 @@ class TimeEntryApp:
         seconds.current(0)
         seconds.pack(side="left")
 
+        # Bind to the ComboboxSelected event for each combobox
+        hours.bind("<<ComboboxSelected>>", self.update_time_entry)
+        minutes.bind("<<ComboboxSelected>>", self.update_time_entry)
+        seconds.bind("<<ComboboxSelected>>", self.update_time_entry)
+
         return frame
+    
+    def update_time_entry(self, event):
+        if self.selected_entry_index is not None:
+            # Get the updated time values from the time pickers
+            start_time = self.get_time_from_picker(self.start_time_entry)
+            end_time = self.get_time_from_picker(self.end_time_entry)
+
+            # Update the corresponding entry in the list
+            self.entries[self.selected_entry_index][2] = start_time
+            self.entries[self.selected_entry_index][3] = end_time
+
+            # Update the listbox display (you might need to adjust the formatting)
+            self.entries_listbox.delete(self.selected_entry_index)
+            self.entries_listbox.insert(self.selected_entry_index,
+                                        f"Project: {self.entries[self.selected_entry_index][0]}, "
+                                        f"Date: {self.entries[self.selected_entry_index][1]}, "
+                                        f"Start Time: {start_time}, "
+                                        f"End Time: {end_time}, "
+                                        f"Note: {self.entries[self.selected_entry_index][4]}")
 
     def get_time_from_picker(self, frame):
         hours, minutes, seconds = frame.winfo_children()
@@ -361,23 +385,27 @@ class TimeEntryApp:
         self.edit_button.config(state='disabled')
         self.delete_button.config(state='disabled')
 
-    def on_select(self, event):
-        selection = event.widget.curselection()
+    def on_select(self, event=None):  # Allow the method to be called without an event
+        selection = self.entries_listbox.curselection()
         if selection:
             self.selected_entry_index = selection[0]
             entry = self.entries[self.selected_entry_index]
-            self.project_entry.delete(0, tk.END)
-            self.project_entry.insert(0, entry[0])
-            self.date_entry.set_date(entry[1])
-            self.set_time_picker(self.start_time_entry, entry[2])
-            self.set_time_picker(self.end_time_entry, entry[3])
-            self.note_entry.delete("1.0", tk.END)  # Clear the note entry field
-            self.note_entry.insert("1.0", entry[4])  # Insert the note from the selected entry
+
+            # Update input fields only if they are empty or the date is different
+            if not self.project_entry.get() or self.date_entry.get() != entry[1]:
+                self.project_entry.delete(0, tk.END)
+                self.project_entry.insert(0, entry[0])
+                self.date_entry.set_date(entry[1])
+                self.set_time_picker(self.start_time_entry, entry[2])
+                self.set_time_picker(self.end_time_entry, entry[3])
+                self.note_entry.delete("1.0", tk.END)
+                self.note_entry.insert("1.0", entry[4])
+
             self.edit_button.config(state='normal')
             self.delete_button.config(state='normal')
         else:
             self.selected_entry_index = None
-            self.clear_fields()  # Clear all fields when no entry is selected
+            self.clear_fields() 
 
     def set_time_picker(self, frame, time_str):
         hours, minutes, seconds = time_str.split(':')
@@ -448,10 +476,14 @@ class TimeEntryApp:
         self.load_entries()
 
     def generate_report(self):
+        """Generates a time report based on user input."""
+        
+        # Get the start and end dates and filter project from the GUI elements.
         start_date = self.start_date_entry.get().strip()
         end_date = self.end_date_entry.get().strip()
         filter_project = self.filter_combobox.get()
 
+        # Validate the date format.
         try:
             start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
@@ -459,23 +491,29 @@ class TimeEntryApp:
             messagebox.showerror("Input Error", "Invalid date format. Use YYYY-MM-DD.")
             return
 
+        # Validate that the end date is after the start date.
         if end_date_obj < start_date_obj:
             messagebox.showerror("Input Error", "End date must be after start date.")
             return
 
+        # Filter the time entries based on the selected date range and project.
         filtered_entries = [entry for entry in self.entries if start_date <= entry[1] <= end_date and (filter_project == "All" or entry[0] == filter_project)]
+        
+        # Calculate the total time spent on each project.
         total_time = defaultdict(timedelta)
         for entry in filtered_entries:
             start_time = datetime.strptime(f"{entry[1]} {entry[2]}", "%Y-%m-%d %H:%M:%S")
             end_time = datetime.strptime(f"{entry[1]} {entry[3]}", "%Y-%m-%d %H:%M:%S")
             total_time[entry[0]] += (end_time - start_time)
 
+        # Format the report text.
         report_text = ""
         for project, time in total_time.items():
             hours, remainder = divmod(time.total_seconds(), 3600)
             minutes, _ = divmod(remainder, 60)
             report_text += f"Project: {project}, Total Time: {int(hours)}h {int(minutes)}m\n"
         
+        # Display the report in a message box.
         messagebox.showinfo("Report", report_text)
 
     def export_to_pdf(self):
@@ -524,12 +562,14 @@ class TimeEntryApp:
 
     def toggle_timer(self):
         if self.is_timer_running:
+            # Stop the timer
             self.stop_time = datetime.now()
             self.elapsed_time += self.stop_time - self.start_time
             self.set_time_picker(self.end_time_entry, self.stop_time.strftime("%H:%M:%S"))
             self.start_stop_button.config(text="Start", style="TButton")
             self.is_timer_running = False
         else:
+            # Start the timer
             self.start_time = datetime.now()
             self.set_time_picker(self.start_time_entry, self.start_time.strftime("%H:%M:%S"))
             self.start_stop_button.config(text="Stop", style="Danger.TButton")
@@ -537,11 +577,13 @@ class TimeEntryApp:
             self.elapsed_time = timedelta()
 
     def create_system_tray(self):
-        image = Image.new('RGB', (64, 64), color=(73, 109, 137))
+        """Creates the system tray icon and menu."""
+        image = Image.new('RGB', (64, 64), color=(73, 109, 137))  # Create a blank image
         draw = ImageDraw.Draw(image)
-        draw.rectangle((0, 0, 64, 64), fill=(0, 0, 0))
-        draw.text((10, 10), "Timer", fill=(255, 255, 255))
+        draw.rectangle((0, 0, 64, 64), fill=(0, 0, 0))  # Draw a black rectangle
+        draw.text((10, 10), "Timer", fill=(255, 255, 255))  # Add "Timer" text
 
+        # Create the tray icon with menu options
         self.tray_icon = pystray.Icon("TimeEntryApp", image, "Time Entry App", menu=pystray.Menu(
             pystray.MenuItem("Show", self.show_app),
             pystray.MenuItem("Start Timer", self.start_timer),
@@ -576,6 +618,7 @@ class TimeEntryApp:
             self.start_stop_button.config(text="Start", style="TButton")
             self.tray_icon.title = "Timer: Stopped"
         self.root.after(1000, self.update_timer_in_tray)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
