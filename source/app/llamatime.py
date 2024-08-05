@@ -15,6 +15,35 @@ import shutil
 import matplotlib.pyplot as plt
 import os
 import tempfile
+from threading import Timer
+from tkinter import simpledialog
+import winsound
+
+
+class ReminderSystem:
+    def __init__(self, app):
+        self.app = app
+        self.reminder_timer = None
+        self.reminder_interval = 30 * 60  # 30 minutes
+
+    def start_reminder(self):
+        self.stop_reminder()  # Cancel any existing reminder
+        self.reminder_timer = Timer(self.reminder_interval, self.show_reminder)
+        self.reminder_timer.start()
+
+    def stop_reminder(self):
+        if self.reminder_timer:
+            self.reminder_timer.cancel()
+
+    def show_reminder(self):
+        # Play a sound when the reminder is shown
+        winsound.PlaySound("SystemHand", winsound.SND_ALIAS)
+
+        if not self.app.is_timer_running:
+            messagebox.showinfo("Reminder", "Don't forget to start your timer!")
+        else:
+            messagebox.showinfo("Reminder", "Remember to stop your timer if you're done working!")
+        self.start_reminder()  # Schedule the next reminder
 
 
 class TimeEntryApp:
@@ -24,6 +53,7 @@ class TimeEntryApp:
         self.root.title("Llama Time")
         self.apply_light_style()
         self.tray_icon_created = False
+        self.reminder_system = ReminderSystem(self)
 
        # List to store time entries
         self.entries = []
@@ -37,7 +67,7 @@ class TimeEntryApp:
         self.start_time = None
         # Elapsed time of the timer
         self.elapsed_time = timedelta()
-
+        
         # Set the icon
         icon = tk.PhotoImage(file="no-problama-master/source/app/llama-icon.gif")
         self.root.iconphoto(False, icon)
@@ -86,6 +116,7 @@ class TimeEntryApp:
 
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Set Reminder Interval", command=self.set_reminder_interval)
         help_menu.add_command(label="Backup Data", command=self.backup_data)
         help_menu.add_command(label="Restore Data", command=self.restore_data)
         help_menu.add_separator()
@@ -262,6 +293,7 @@ class TimeEntryApp:
         # Export to PDF Button
         self.export_button = ttk.Button(self.root, text="Export to PDF", command=self.export_to_pdf)
         self.export_button.grid(column=0, row=20, columnspan=2, padx=10, pady=5, sticky="ew")
+        
     
     def create_time_picker(self, parent):
         frame = ttk.Frame(parent)
@@ -570,6 +602,7 @@ class TimeEntryApp:
             self.set_time_picker(self.end_time_entry, self.stop_time.strftime("%H:%M:%S"))
             self.start_stop_button.config(text="Start", style="TButton")
             self.is_timer_running = False
+            self.reminder_system.stop_reminder()
         else:
             # Start the timer
             self.start_time = datetime.now()
@@ -577,18 +610,25 @@ class TimeEntryApp:
             self.start_stop_button.config(text="Stop", style="Danger.TButton")
             self.is_timer_running = True
             self.elapsed_time = timedelta()
+            self.reminder_system.start_reminder()
+
+    def set_reminder_interval(self):
+        interval = simpledialog.askinteger("Set Reminder Interval", "Enter reminder interval in minutes:", 
+                                       minvalue=1, maxvalue=120)
+        if interval:
+            self.reminder_system.reminder_interval = interval * 60
+            messagebox.showinfo("Reminder Interval", f"Reminder interval set to {interval} minutes.")       
 
     def create_system_tray(self):
         """Creates the system tray icon and menu."""
-        if not self.tray_icon_created:
-            image = Image.new('RGB', (64, 64), color=(73, 109, 137))  # Create a blank image
+        image = Image.new('RGB', (64, 64), color=(73, 109, 137))  # Create a blank image
         draw = ImageDraw.Draw(image)
         draw.rectangle((0, 0, 64, 64), fill=(0, 0, 0))  # Draw a black rectangle
         draw.text((10, 10), "Timer", fill=(255, 255, 255))  # Add "Timer" text
 
-
+        if not self.tray_icon_created:
         # Create the tray icon with menu options
-        self.tray_icon = pystray.Icon("TimeEntryApp", image, "Time Entry App", menu=pystray.Menu(
+            self.tray_icon = pystray.Icon("TimeEntryApp", image, "Time Entry App", menu=pystray.Menu(
             pystray.MenuItem("Show", self.show_app),
             pystray.MenuItem("Start Timer", self.start_timer),
             pystray.MenuItem("Stop Timer", self.stop_timer),
