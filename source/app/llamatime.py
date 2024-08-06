@@ -88,7 +88,7 @@ class TimeEntryApp:
         menu_bar = Menu(root)
         root.config(menu=menu_bar)
 
-        # Add menu items
+        # Add File menu items
         file_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="New")
@@ -97,32 +97,40 @@ class TimeEntryApp:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=root.quit)
 
+        # Create the edit report bar items
         edit_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Edit", menu=edit_menu)
         edit_menu.add_command(label="Undo")
         edit_menu.add_command(label="Redo")
 
+        # Create the help report bar items
         reports_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Reports", menu=reports_menu)
         reports_menu.add_command(label="Updates")
         reports_menu.add_separator()
         reports_menu.add_command(label="Docs")
         reports_menu.add_command(label="Support")
-
+        
+        # Create the views menu bar items
         view_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="View", menu=view_menu)
         view_menu.add_command(label="Dark Theme", command=self.apply_dark_style)
         view_menu.add_command(label="Light Theme", command=self.apply_light_style)
 
+        # Create the tools menu bar items
+        tools_menu = Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Tools", menu=tools_menu)
+        tools_menu.add_command(label="Set Reminder Interval", command=self.set_reminder_interval)
+        tools_menu.add_separator()
+        tools_menu.add_command(label="Backup Data", command=self.backup_data)
+        tools_menu.add_command(label="Restore Data", command=self.restore_data)
+
+        # Create the help menu bar items
         help_menu = Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Set Reminder Interval", command=self.set_reminder_interval)
-        help_menu.add_command(label="Backup Data", command=self.backup_data)
-        help_menu.add_command(label="Restore Data", command=self.restore_data)
         help_menu.add_separator()
-        help_menu.add_command(label="Updates")
-        help_menu.add_command(label="Docs")
-        help_menu.add_command(label="Support")
+        help_menu.add_command(label="Update")
+        help_menu.add_command(label="Documents")
 
         # Create the system tray icon
         self.create_system_tray()
@@ -149,7 +157,7 @@ class TimeEntryApp:
         style.configure("TLabel", background="#2e2e2e", foreground="white")
         style.configure("TButton", background="#555555", foreground="white")
         style.configure("TEntry", fieldbackground="#3e3e3e", foreground="white")
-        style.configure("TCombobox", fieldbackground="#3e3e3e", foreground="white")
+        style.configure("TCombobox", fieldbackground="#3e3e3e", foreground="black")
         style.configure("TFrame", background="#2e2e2e")
         style.configure("TListbox", background="#3e3e3e", foreground="white")
         style.configure("Danger.TButton", background="red", foreground="white")
@@ -174,17 +182,17 @@ class TimeEntryApp:
     def create_widgets(self):
         # Project Name
         self.project_label = ttk.Label(self.root, text="Project Name:")
-        self.project_label.grid(column=0, row=0, padx=10, pady=5, sticky="w")
+        self.project_label.grid(column=0, row=0, padx=5, pady=5, sticky="w")
         self.project_entry = ttk.Entry(self.root, width=30)
-        self.project_entry.grid(column=1, row=0, padx=10, pady=5, sticky="ew")
+        self.project_entry.grid(column=1, row=0, padx=5, pady=5, sticky="ew")
 
         # Date
         self.date_label = ttk.Label(self.root, text="Date (YYYY-MM-DD):")
-        self.date_label.grid(column=0, row=1, padx=10, pady=5, sticky="w")
+        self.date_label.grid(column=0, row=1, padx=5, pady=5, sticky="w")
         self.date_entry = DateEntry(self.root, width=30, background='darkblue',
                 foreground='white', borderwidth=2, year=datetime.now().year,
                 month=datetime.now().month, day=datetime.now().day, date_pattern='yyyy-mm-dd')
-        self.date_entry.grid(column=1, row=1, padx=10, pady=5, sticky="ew")
+        self.date_entry.grid(column=1, row=1, padx=5, pady=5, sticky="ew")
 
         # Start Time
         self.start_time_label = ttk.Label(self.root, text="Start Time:")
@@ -247,7 +255,7 @@ class TimeEntryApp:
         self.entries_listbox.bind('<<ListboxSelect>>', self.on_select)
 
         # Edit and Delete Buttons
-        self.edit_button = ttk.Button(self.root, text="Edit", command=self.edit_entry, state='disabled')
+        self.edit_button = ttk.Button(self.root, text="Save Edit", command=self.edit_entry, state='enabled')
         self.edit_button.grid(column=0, row=12, padx=10, pady=5, sticky="ew")
 
         self.delete_button = ttk.Button(self.root, text="Delete", command=self.delete_entry, state='disabled')
@@ -338,6 +346,14 @@ class TimeEntryApp:
     def get_time_from_picker(self, frame):
         hours, minutes, seconds = frame.winfo_children()
         return f"{hours.get()}:{minutes.get()}:{seconds.get()}"
+    
+    def update_total_time(self):
+        self.total_time.clear()
+        for entry in self.entries:
+            start_time = datetime.strptime(f"{entry[1]} {entry[2]}", "%Y-%m-%d %H:%M:%S")
+            end_time = datetime.strptime(f"{entry[1]} {entry[3]}", "%Y-%m-%d %H:%M:%S")
+            self.total_time[entry[0]] += (end_time - start_time)
+        self.display_total_time()
 
     def configure_grid(self):
         for i in range(21):
@@ -378,11 +394,14 @@ class TimeEntryApp:
 
         self.write_entries()
         self.load_entries()
+        self.update_total_time()
         self.clear_fields()
 
     def load_entries(self):
         self.entries_listbox.delete(0, tk.END)
         self.total_time.clear()
+        self.update_project_filter()
+        self.update_total_time()
         self.entries = []
         
         try:
@@ -455,6 +474,7 @@ class TimeEntryApp:
             del self.entries[self.selected_entry_index]
             self.write_entries()
             self.load_entries()
+            self.update_total_time()
             self.clear_fields()
 
     def display_total_time(self):
